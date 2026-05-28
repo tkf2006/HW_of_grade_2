@@ -1,0 +1,374 @@
+\documentclass[11pt]{article}
+%\usepackage{ctex}
+\usepackage[utf8]{inputenc}
+\usepackage[a4paper, left=2.5cm, right=2.5cm, top=2.5cm, bottom=2.5cm]{geometry} 
+
+\usepackage{graphicx}
+\usepackage{amsmath, amsthm, amssymb}
+\usepackage{algorithm} 
+\usepackage{algpseudocode} %编写伪代码的语法
+
+\usepackage{setspace} % 用于调整行间距
+
+\usepackage{parskip}  
+
+\title{\textbf{Assignment 4}}
+\author{Name: Kaifeng Tang \quad ID: 524030910124}
+\date{\today}
+
+\begin{document}
+\maketitle 
+\section*{Question 1}
+\textbf{(a)} Since $L=R=1$, we an know that $i_{j+1}-i_j = 1 $ for all $1<j \le \ell-1$. 
+The subsequence become a contiguous subsequence. And the problem changes to: 
+Find the Continuous Subsequence Sum.  
+
+\qquad \textbf{Define Subproblem:} Let $rev(i)$ be the maximum revenue of the (1,1)-step subsequence ended up with $a_i$.
+
+\qquad \textbf{Subproblem Transfer: } 
+
+\qquad \qquad \textit{Case 1. } Only choose $a_i$: $rev(i) = a_i$; 
+
+\qquad \qquad \textit{Case 2. } Besides $a_i$, Choose some other elements: $rev(i) = rev(i-1) + a_i$.  
+
+\qquad $\implies rev(i) = \max\{a_i, rev(i-1) + a_i\}$. 
+
+\qquad Objective: $Rev = \max_{i \in (1,n)}\{rev(i)\}$. 
+
+\qquad \textbf{Construct DP Algorithm: }
+% --- 代码示例 ---
+\begin{algorithm}
+\caption{Find the maximum (1,1)-step subsequence}
+\begin{algorithmic}[1] % [1] 表示显示行号
+\State $\text{Initialize } rev(1)=a_1$; $Rev = rev(1)$
+\For{$i$ = 2 to $n$: }
+    \State $rev(i)=\max\{a_i, rev(i-1) + a_i\}$
+    \State $Rev = \max\{Rev, rev(i)\}$
+\EndFor
+\State \Return $Rev$
+\end{algorithmic}
+\end{algorithm}
+
+\qquad \textbf{Time Complexity: } at most $n$ rounds; compute for O(1) time
+
+\qquad $\implies$ Overall Time: $O(n)$. 
+
+\qquad \textbf{Proof of Correctness: }
+
+\qquad From \textbf{Subproblem Transfer} above we prove the correctness of Transfer Function. 
+
+\qquad Since $rev(i)=\max\{a_i, rev(i-1) + a_i\}$, we get to know $rev(i)$ actually from $rev(i-1)$. 
+So from 1 to $n$ is in the topological order. 
+
+\qquad 
+
+\textbf{(b)} For any $L$ and $R$, from $L \le i_{j+1} - i_j \le R$ we have $i_{j+1}-R \le i_j \le i_{j+1}-L$. 
+Still, we use the DP idea similar to \textbf{(a)}. 
+
+\qquad \textbf{Define Subproblem:} Let $rev(i)$ be the maximum revenue of the \textbf{(L,R)}-step subsequence ended up with $a_i$.
+
+\qquad \textbf{Subproblem Transfer: } Two cases just the same as (a), only a condition changes: 
+\[rev(i) = \max\{a_i, rev(j) + a_i\} \text{, where } j \text{ satisfies } i-R \le j \le i-L\]
+
+\qquad if no suitable $j$ in $(i-R, i-L)$, then $rev(i)=a_i$. 
+
+\qquad \textbf{Construct DP Algorithm: }
+% --- 代码示例 ---
+\begin{algorithm}
+\caption{Find the maximum (L,R)-step subsequence}
+\begin{algorithmic}[1] % [1] 表示显示行号
+\For{$i$ = 1 to $n$: }
+    \State Initialize $best = 0 $
+    \For{$j = \max(1, i-R)$ to $i-L$:}
+        \State $best = \max (best, j)$ 
+    \EndFor
+    \State $rev(i) = a_i + best$
+\EndFor
+\State $Rev = \max \{rev(1), rev(2), \dots, rev(n)\}$
+\State \Return $Rev$
+\end{algorithmic}
+\end{algorithm}
+
+\qquad \textbf{Time Complexity: } at most $n$ rounds; check suitable $j$ for $O(n)$ time
+
+\qquad $\implies$ Overall Time: $O(n^2)$. 
+
+\qquad \textbf{Proof of Correctness: } From \textbf{Subproblem Transfer} above, we can get 
+\[rev(i) = \max\{a_i, rev(j) + a_i\} = a_i + \max \{0, rev(j)\}, i-R \le j \le i-L\]
+
+\qquad Lead in a new variable $best$ to maintain MAX(0, $rev(j)$) part, which is Initialized 0. Through checking $j$ in the specific period, 
+we can get update best. 
+
+\qquad Since $i-R \le j \le i-L$, we get $rev(i)$ from previous $rev$. So the order 
+1 to n is the topological order. 
+
+\qquad 
+
+\textbf{(c)} By algorithm in Solution \textbf{(b)}, the algorithm check all the $j \in (i-R, i-L)$ to update $best$, which spends $O(n)$ time. 
+We need to optimize this part. 
+
+\qquad By the idea of \textit{Potential Prefix}, we don't have to care about all the $j$ when getting a suiitable $j$. 
+Instead, we just need to care about the $j$ that may become the Transfer source in the future. 
+
+\qquad Let's maintain a queue $Q$, pushing Potantial prefix $j$ in it. 
+
+\textbf{Maintain queue Q:} when Q deals with $i$-th element, consider $j_1 < j_2 $: 
+
+\begin{itemize}
+    \item $j_1$ is "older" than $j_2$
+    \item if $rev(j_1) < rev(j_2)$, $j_1$ would never be chosen as a transfer source. 
+    \item We say $j_1$ is "out-of-date", and should be kicked out. 
+\end{itemize}
+
+\textbf{Proof of Correctness:}
+
+\qquad By this rule, when algorithm is in round $i$-th, Q should add $new = i-L$. Before that, 
+Q should kick out all tails and fronts "out-of-date". 
+
+\qquad The result is, Q is always index-increasing and $rev$-increasing. So $Q.front$ must corresponds to the $j$
+with largest $rev(j)$. 
+
+\qquad So the correct Subproblem Transfer: $rev(i) = a_i + \max(0, rev(Q.front))$.
+\newpage 
+% --- 代码示例 ---
+\begin{algorithm}
+\caption{Find the maximum $(L,R)$-step subsequence with Potential Prefix}
+\begin{algorithmic}[1]
+\State Initialize an empty deque $Q$
+\State Initialize $Rev \gets -\infty$
+
+\For{$i = 1$ to $n$}
+    \State $new \gets i - L$
+
+    \If{$new \ge 1$}
+        \While{$Q$ is not empty and $rev(Q.back) \le rev(new)$}
+            \State PopBack($Q$)
+        \EndWhile
+        \State PushBack($Q, new$)
+    \EndIf
+
+    \While{$Q$ is not empty and $Q.front < i - R$}
+        \State PopFront($Q$)
+    \EndWhile
+
+    \If{$Q$ is empty}
+        \State $rev(i) \gets a_i$
+    \Else
+        \State $rev(i) \gets a_i + \max(0, rev(Q.front))$
+    \EndIf
+
+    \State $Rev \gets \max(Rev, rev(i))$
+\EndFor
+
+\State \Return $Rev$
+\end{algorithmic}
+\end{algorithm}
+
+\textbf{Time Complexity: } 
+\begin{itemize}
+    \item Every index are pushed/popped by Q at most once; 
+    \item Overall Time: $O(n)$. 
+\end{itemize}
+
+\qquad 
+
+\qquad 
+
+\qquad 
+
+\section*{Question 2}
+Consider a sequence of continuous words: $a_i, a_{i+1}, a_{i+2}, \dots, a_j$. 
+By observation, the subtree which consists of this sequence must be a Binary-Search Tree too. 
+
+\textbf{Subproblem Definition: }
+
+\qquad Define $c(i, j)$: The minimum cost of a Binary-Search Tree with {$a_i, a_{i+1}, a_{i+2}, \dots, a_j$}.
+
+\qquad Assume choosing an arbitrary node $a_k$ as root ($i \le k \le j$), then $a_k$'s contribution: $w_k \times \ell_k(T) = w_k$.
+
+\textbf{Subproblem Transfer: }
+
+\qquad $\cdot $ cost of left subtree: $c(i, k-1)$; 
+
+\qquad $\cdot$ cost of right subtree: $c(k+1, j)$.
+
+\qquad Define weight sum $S(i):= 
+\begin{cases}
+    0, & i = 0 \\
+    w_1 + w_2 + \dots + w_i, & o.w. 
+\end{cases}$
+
+\qquad Since all nodes' level in both left and right subtree add 1 due to Transfer, 
+all nodes except $a_k$ add 1 onto $\ell_i(T)$, i.e., $a_i$'s cost plus $w_i$, except $a_k$. 
+
+\qquad So the Transfer Function: 
+\[c(i, j) = \min_{k \in [i,j]}\{c(i, k-1) + c(k+1, j) + S(j) - S(i-1)\}\]
+
+\textbf{Topological Order: } $c(i, j)$ depends on shorter ones $c(i, k-1), c(k+1, j)$. 
+
+\qquad So algorithm should compute by the sequence length from small to large (1 to n). 
+
+\textbf{Algorithms: }
+
+\textbf{OptimalBST}($w([1,2,\dots,n])$): 
+\begin{align*}
+    & \text{Initialize weight sum S[i]: } S[0]=0; S[i]=S[i-1]+w_i \text{ for i = 1 to n } \\ 
+    & \text{Initialize }c(i, i-1)=0 \text{, for } i=1 \text{ to } n+1 \\ 
+    &  \\
+    & \text{for } length = 1 \text{ to } n: \\
+    & \qquad c(i, j) \gets +\infty \text{ for all i, j} \\
+    & \qquad \text{for } k=i \text{ to } j:  \\
+    & \qquad \qquad cost = c(i, k-1) + c(k+1, j) + S[j] - S[i-1] \\
+    & \qquad \qquad \text{update } c(i, j) \gets \min \{cost, c(i, j)\}; \text{ Get optimal Root index } k \text{ for each [i, j]. } \\
+    & \text{return } k(i, j) 
+\end{align*}
+
+\textbf{BuildTree}($i, j$): 
+\begin{align*}
+    & \text{Get optimal root of BST(i, j) from } OptimalBST(w). \\
+    & \text{Let }node \gets k \\
+    & node.left = BuildTree(i, k-1) \\
+    & node.right = BuildTree(k+1, j) \\
+    & \text{return } node 
+\end{align*}
+
+\textbf{Time Complexity: }
+
+\qquad States of $c(i, j)$: $O(n^2)$. 
+
+\qquad Every state need $O(n)$ time to get root $k$. 
+
+\qquad Compute $S[j]-S[i-1]$: O(1) time. 
+
+\qquad Overall Time: $O(n^3)$. 
+
+\textbf{Proof of Correctness: }Seen in part \textbf{Subproblem Transfer } and \textbf{Topological Order}. 
+
+\newpage
+
+\section*{Question 3}
+By the problem statement, our objective is to solve Knapsack Problem with Tree constraint. 
+Assume $Root$ the root of the Tree. 
+
+\textbf{Subproblem Definition}
+
+\qquad Define $f[u, k]$: In a subtree rooted as node $u$, the maximum total value when we choose $k$ nodes in this subtree.  
+It is obvious that $u$ must be chosen if $k \neq 0$ ($f[u, 1]=v_u$), and $f[u, 0] = 0$. 
+
+\qquad Objective changes to find $f[root, W]$.
+
+\textbf{Subproblem Transfer}
+
+\qquad Assume root $u$ has children $\{c_1, c_2, \dots, c_m\}$. If $k \ge 1$, we must choose node $u$ with value $v_u$. 
+The left $k-1$ nodes will be assigned to children. Let child $c_1$ choose $n_1$ nodes, $c_2$ choose $n_2$ nodes, \dots 
+Then $n_1 + n_2 + \dots + n_m = k-1$ holds. 
+
+\qquad So the state transfer: \[f[u, k] = \begin{cases}
+    0, & k = 0 \\
+    v_u+ \max \{\sum_{i \in [1,m]}f[c_i, n_i]\} & k \ge 1, n_1 + \dots + n_m = k - 1 \\
+\end{cases}\]
+
+\textbf{Topological Order}
+
+\qquad If $u$ is the leaf node, then $f[u, 0]=0, f[u, 1]=v_u, f[u, k]=-\infty $ when $k \ge 2$. 
+
+\qquad From the Transfer, $f[u, k]$ depends on $f[c_j, n_j]$, where $c_j$ is a child of $u$. 
+So if we compute with the Tree's Post Order (Compute children first, compute parent last), then we are absolutely in topological order. 
+
+\qquad 
+
+\textbf{Algorithm01}
+
+Algorithm TreeKnapsack(root, W): 
+\begin{align*}
+    & \text{PostOrder the tree. } \\
+    & \text{Initialize } f[u, 0]=0, f[u, k]=-\infty \text{ for each u in PostOrder.} \\
+    & \text{If } u \text{ is a leaf: } f[u, 1] = v_u \\
+    & \text{Else } \\
+    & \qquad \text{For } k = 1 \to W :  \\
+    & \qquad \qquad f[u, k] = v_u + \max\{f[c_1, n_1], f[c_2, n_2], \dots, f[c_m, n_m]\} \text{ for } \sum_{1}^{m} n_i = k - 1 \\
+    & \qquad \text{Endfor} \\
+    & \text{EndIf} \\
+    & \text{return } \max_{0 \le k \le W} f[Root, k] \\
+\end{align*}
+
+\textbf{Time Complexity} 
+
+\qquad For each node $u$, we need to compute ($W+1$) $f[u,k] $ states. 
+
+\qquad Compute $f[u, k]$: we should assign $k-1$ nodes to every child subtree. 
+Every transfer needs $O(W)$ time to get the number of chosen children.
+
+\qquad There are $n-1$ parent-child edges. 
+
+\qquad $\implies$ Overall Time: $O(nW^2)$. 
+
+\textbf{Proof of Correctness}
+
+\qquad We can know DP's transfer function and topological order are correct by the analysis above. 
+
+\qquad 
+
+\textbf{Improvement} 
+
+\qquad In Algorithm01 above, we spend much time to assign capacity W to every children. 
+We can come up with an idea that no longer enumerate capacity assignment for every children. 
+
+\begin{itemize}
+    \item \textbf{Use PreOrder:} PreOrder the Tree, give each node number {1,2,\dots,n} in PreOrder. 
+    Maintain an array $next[i]$, to record thge next location after Subtree($i$). If not choose node $i$, all $i$'s decendants will bot be chosen. 
+    So skip to $next[i]$ directly. 
+    \item \textbf{Subproblem Definition:} Consider remaining capacity w, where $0 \le w \le W$. \\
+    Define $f[i, w]$: the maximum value we can get, considering from node $i$ and remaining capacity $w$. 
+    \item \textbf{Subproblem Transfer:} for the $i$-th node in PreOrder, only two cases below are possible: \\
+    \textit{Case 1. } not choose $i \to$ then the whole subtree($i$) should not be chosen. \\
+    $ \text{\qquad \qquad } f[i, w] = f[next[i], w]$. \\
+    \textit{Case 2. } choose $i \to$ spend one capacity, get value $v_i$. $i$'s children is available to be chosen. \\
+    $ \text{\qquad \qquad } f[i, w] = v_i + f[i +1, w - 1]$. \\
+    So we have: $f[i, w]=\max \{f[next[i], w], v_i + f[i+1, w-1]\}$
+    \item \textbf{Topological Order:} $f[i, 0] = 0, f[n+1, w] = 0$; \\
+    State $f[i, w]$ depends on $f[next[i], w]$ and $f[i+1, w-1]$. Since $next[i] > i$, $f[i, w]$ only depends on the state 
+    with larger index. \\
+    We can compute with the order $i = n, n-1, \dots, 1$. It is the correct topological order.
+\end{itemize}
+
+\textbf{Algorithm02}
+
+Algorithm OptTreeKnapsack(root, W): 
+\begin{align*}
+    & \text{Do PreOrder from Root; Rename node as 1, 2, ..., n by PreOrder. } \\
+    & \text{Compute next[i] for each } i \\
+    & \text{Initialize } f[n+1,w] = 0 \text{ for }w = 0 \to W \\
+    & \text{For } i = n \to 1: \\
+    & \qquad f[i, 0] = 0 \\
+    & \qquad \text{For } w = 1 \to W: \\
+    & \qquad \qquad f[i, w] = \max \{f[next[i], w], v_i + f[i+1, w-1]\} \\
+    & \qquad \text{EndFor} \\
+    & \text{EndFor} \\
+    & \text{return } f[1, W]
+\end{align*}
+
+\textbf{Time Complexity} 
+
+\qquad PreOrder each node once: $O(n)$ time. 
+
+\qquad Compute every Transfer: $O(1)$ time. 
+
+\qquad Update remaining capacity $w$: from $W$ to 0, W rounds. 
+
+\qquad $\implies$ Overall Time: $O(nW)$. 
+
+\textbf{Proof of Correctness}
+
+\qquad From analysis above, we can know that the definition with PreOrder, Transfer function are corrct; 
+DP algorithm compute with correct topological order. 
+
+\section*{Question 4}
+I spend 4-5 hours to finish assignment4 tihs time. 
+
+Difficulty Score: 5 
+
+I did the assignment by myself, with some help of ideas by GPT. 
+
+\end{document}
+
